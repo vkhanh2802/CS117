@@ -1,0 +1,319 @@
+﻿<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FocusGuard AI</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <main class="page-shell">
+    <header class="hero">
+      <div class="hero-main">
+        <p class="eyebrow">Machine Learning Demo</p>
+        <h1>FocusGuard AI</h1>
+        <p class="hero-copy">
+          Trả lời vài câu hỏi nhanh để ước lượng mức độ trì hoãn khi sử dụng điện thoại.
+          Giao diện được thiết kế để nhập nhanh, đọc kết quả rõ ràng và dùng tốt trên laptop lẫn điện thoại.
+        </p>
+        <div class="hero-chips">
+          <span>4 nhóm tín hiệu</span>
+          <span>3 mức rủi ro</span>
+          <span>Gợi ý hành động</span>
+        </div>
+      </div>
+      <aside class="intro-card">
+        <span class="mini-label">Mô hình hiện tại</span>
+        <strong>XGBoost Classifier</strong>
+        <p>Dự đoán Low, Medium hoặc High từ hành vi sử dụng, bối cảnh học tập và deadline.</p>
+      </aside>
+    </header>
+
+    <section class="dashboard-grid">
+      <section class="panel form-panel">
+        <div class="panel-heading heading-with-progress">
+          <div>
+            <p class="eyebrow">Input</p>
+            <h2>Trả lời nhanh</h2>
+          </div>
+          <div class="progress-meta">
+            <strong id="progress-count">0/4</strong>
+            <span>nhóm hoàn tất</span>
+          </div>
+        </div>
+
+        <div class="progress-track" aria-hidden="true">
+          <span id="progress-bar"></span>
+        </div>
+
+        <div class="section-nav" aria-hidden="true">
+          <span>01 Thời gian</span>
+          <span>02 Học tập</span>
+          <span>03 Deadline</span>
+          <span>04 Phân tâm</span>
+        </div>
+
+        {% if error %}
+          <div class="alert">{{ error }}</div>
+        {% endif %}
+
+        <form id="predict-form" action="{{ url_for('predict_route') }}" method="post">
+          <fieldset data-group>
+            <legend><span>01</span> Thời gian sử dụng</legend>
+
+            <div class="question-block">
+              <p>Khoảng thời gian nào trong ngày?</p>
+              <div class="choice-grid four">
+                {% for option in time_of_day_options %}
+                  <label class="choice-card">
+                    <input type="radio" name="time_of_day" value="{{ option }}" {% if form_data.get('time_of_day') == option %}checked{% endif %} required>
+                    <span>{{ time_of_day_labels[option] }}</span>
+                  </label>
+                {% endfor %}
+              </div>
+            </div>
+
+            <div class="question-block">
+              <p>Bạn dùng loại ứng dụng nào?</p>
+              <div class="choice-grid five">
+                {% for option in app_categories %}
+                  <label class="choice-card">
+                    <input type="radio" name="app_category" value="{{ option }}" {% if form_data.get('app_category') == option %}checked{% endif %} required>
+                    <span>{{ app_category_labels[option] }}</span>
+                  </label>
+                {% endfor %}
+              </div>
+            </div>
+
+            <div class="question-block">
+              <p>Phiên sử dụng kéo dài bao lâu?</p>
+              <div class="choice-grid five">
+                {% for value, label in [('8', '1–15 phút'), ('23', '16–30 phút'), ('38', '31–45 phút'), ('53', '46–60 phút'), ('75', 'Trên 60 phút')] %}
+                  <label class="choice-card">
+                    <input type="radio" name="duration_minutes" value="{{ value }}" {% if form_data.get('duration_minutes') == value %}checked{% endif %} required>
+                    <span>{{ label }}</span>
+                  </label>
+                {% endfor %}
+              </div>
+            </div>
+          </fieldset>
+
+          <fieldset data-group>
+            <legend><span>02</span> Bối cảnh học tập</legend>
+
+            <div class="question-row">
+
+              <div class="question-block compact">
+                <p>Đang trong giờ học?</p>
+                <div class="choice-grid two">
+                  <label class="choice-card">
+                    <input type="radio" name="is_class_time" value="0"
+                      {% if form_data.get('is_class_time') == '0' %}checked{% endif %} required>
+                    <span>Không</span>
+                  </label>
+
+                  <label class="choice-card">
+                    <input type="radio" name="is_class_time" value="1"
+                      {% if form_data.get('is_class_time') == '1' %}checked{% endif %} required>
+                    <span>Có</span>
+                  </label>
+                </div>
+              </div>
+
+              <div class="question-block compact">
+                <p>Đang trong thời gian nên học?</p>
+                <div class="choice-grid two">
+                  <label class="choice-card">
+                    <input type="radio" name="is_study_period" value="0"
+                      {% if form_data.get('is_study_period') == '0' %}checked{% endif %} required>
+                    <span>Không</span>
+                  </label>
+
+                  <label class="choice-card">
+                    <input type="radio" name="is_study_period" value="1"
+                      {% if form_data.get('is_study_period') == '1' %}checked{% endif %} required>
+                    <span>Có</span>
+                  </label>
+                </div>
+              </div>
+
+              <div class="question-block compact">
+                <p>Có phải đêm muộn?</p>
+                <div class="choice-grid two">
+                  <label class="choice-card">
+                    <input type="radio" name="is_late_night" value="0"
+                      {% if form_data.get('is_late_night') == '0' %}checked{% endif %} required>
+                    <span>Không</span>
+                  </label>
+
+                  <label class="choice-card">
+                    <input type="radio" name="is_late_night" value="1"
+                      {% if form_data.get('is_late_night') == '1' %}checked{% endif %} required>
+                    <span>Có</span>
+                  </label>
+                </div>
+              </div>
+
+            </div>
+          </fieldset>
+
+          <fieldset data-group>
+            <legend><span>03</span> Áp lực deadline</legend>
+
+            <div class="question-block">
+              <p>Còn bao lâu tới deadline?</p>
+              <div class="choice-grid five">
+                {% for value, label in [('0', 'Đã sát hạn'), ('12', 'Dưới 24 giờ'), ('36', '1–2 ngày'), ('84', '3–4 ngày'), ('120', 'Trên 4 ngày')] %}
+                  <label class="choice-card">
+                    <input type="radio" name="hours_to_deadline" value="{{ value }}" {% if form_data.get('hours_to_deadline') == value %}checked{% endif %} required>
+                    <span>{{ label }}</span>
+                  </label>
+                {% endfor %}
+              </div>
+            </div>
+
+            <div class="question-block">
+              <p>Mức ưu tiên của công việc?</p>
+              <div class="choice-grid three">
+                {% for option in task_priorities %}
+                  <label class="choice-card">
+                    <input type="radio" name="task_priority" value="{{ option }}" {% if form_data.get('task_priority') == option %}checked{% endif %} required>
+                    <span>{{ task_priority_labels[option] }}</span>
+                  </label>
+                {% endfor %}
+              </div>
+            </div>
+
+            <div class="question-block">
+              <p>Bạn còn bao nhiêu bài tập/công việc?</p>
+              <div class="choice-grid six">
+                {% for value in ['0', '1', '2', '3', '4', '5'] %}
+                  <label class="choice-card">
+                    <input type="radio" name="assignment_count" value="{{ value }}" {% if form_data.get('assignment_count') == value %}checked{% endif %} required>
+                    <span>{{ value }}</span>
+                  </label>
+                {% endfor %}
+              </div>
+            </div>
+          </fieldset>
+
+          <fieldset data-group>
+            <legend><span>04</span> Mức độ phân tâm</legend>
+
+            <div class="question-block">
+              <p>Bạn nhận khoảng bao nhiêu thông báo?</p>
+              <div class="choice-grid five">
+                {% for value, label in [('3', '0–5'), ('8', '6–10'), ('13', '11–15'), ('20', '16–25'), ('30', 'Trên 25')] %}
+                  <label class="choice-card">
+                    <input type="radio" name="notification_count" value="{{ value }}" {% if form_data.get('notification_count') == value %}checked{% endif %} required>
+                    <span>{{ label }}</span>
+                  </label>
+                {% endfor %}
+              </div>
+            </div>
+
+            <div class="question-block">
+              <p>Bạn mở điện thoại khoảng bao nhiêu lần?</p>
+              <div class="choice-grid four">
+                {% for value, label in [('2', '1–3 lần'), ('5', '4–6 lần'), ('8', '7–10 lần'), ('12', 'Trên 10 lần')] %}
+                  <label class="choice-card">
+                    <input type="radio" name="unlock_count" value="{{ value }}" {% if form_data.get('unlock_count') == value %}checked{% endif %} required>
+                    <span>{{ label }}</span>
+                  </label>
+                {% endfor %}
+              </div>
+            </div>
+          </fieldset>
+
+          <button class="submit-button" type="submit">
+            <span class="button-label">Phân tích mức độ trì hoãn</span>
+            <span class="button-loading" aria-hidden="true">
+              <span class="spinner"></span>
+              Đang phân tích
+            </span>
+          </button>
+          <p class="loading-note" role="status" aria-live="polite">Mô hình đang xử lý câu trả lời của bạn...</p>
+        </form>
+      </section>
+
+      <section class="panel result-panel">
+        <div class="panel-heading">
+          <p class="eyebrow">Prediction</p>
+          <h2>Kết quả mô hình</h2>
+        </div>
+
+        {% if result %}
+          <div class="result-spotlight">
+            <span class="mini-label">Mức rủi ro dự đoán</span>
+            <div class="risk-badge risk-{{ result.label|lower }}">{{ result.label }}</div>
+          </div>
+          <p class="advice">{{ result.advice }}</p>
+
+          {% if result.probabilities %}
+            <div class="probability-block">
+              <h3>Xác suất từng lớp</h3>
+              {% for label, probability in result.probabilities.items() %}
+                <div class="probability-row">
+                  <div class="probability-label">
+                    <span>{{ label }}</span>
+                    <strong>{{ "%.2f"|format(probability * 100) }}%</strong>
+                  </div>
+                  <div class="bar"><span style="width: {{ probability * 100 }}%"></span></div>
+                </div>
+              {% endfor %}
+            </div>
+          {% endif %}
+
+          <div class="explanation-block">
+            <div class="subheading">
+              <h3>Tín hiệu nổi bật</h3>
+              <span>Dựa trên câu trả lời của bạn</span>
+            </div>
+            <div class="explanation-list">
+              {% for item in result.explanations %}
+                <article class="explanation-card tone-{{ item.tone }}">
+                  <strong>{{ item.title }}</strong>
+                  <p>{{ item.detail }}</p>
+                </article>
+              {% endfor %}
+            </div>
+          </div>
+        {% else %}
+          <div class="empty-state">
+            <span>AI</span>
+            <h3>Chưa có dự đoán</h3>
+            <p>Hoàn thành 4 nhóm câu hỏi bên trái để xem nhãn dự đoán, xác suất và gợi ý hành động.</p>
+          </div>
+        {% endif %}
+      </section>
+    </section>
+  </main>
+
+  <script>
+    const groups = [...document.querySelectorAll('[data-group]')];
+    const progressBar = document.getElementById('progress-bar');
+    const progressCount = document.getElementById('progress-count');
+
+    function updateProgress() {
+      const completed = groups.filter((group) => {
+        const names = [...new Set([...group.querySelectorAll('input[required]')].map((input) => input.name))];
+        return names.every((name) => group.querySelector(`input[name="${name}"]:checked`));
+      }).length;
+
+      progressBar.style.width = `${(completed / groups.length) * 100}%`;
+      progressCount.textContent = `${completed}/${groups.length}`;
+    }
+
+    const form = document.querySelector('form');
+
+    form.addEventListener('submit', () => {
+      if (!form.checkValidity()) return;
+      form.classList.add('is-loading');
+      form.querySelector('.submit-button').disabled = true;
+    });
+
+    document.addEventListener('change', updateProgress);
+    updateProgress();
+  </script>
+</body>
+</html>

@@ -1,0 +1,6 @@
+Best model: XGBoost
+Label mapping:
+Low -> 0
+Medium -> 1
+High -> 2
+scikit-learn: 1.8.0
