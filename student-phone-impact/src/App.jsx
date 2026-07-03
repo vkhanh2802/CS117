@@ -1,32 +1,43 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import './App.css'
+
+const APP_GROUPS = ['Productivity', 'Social', 'Entertainment', 'Gaming', 'System']
+
+const KNOWN_APPS = [
+  'VSCode',
+  'Notion',
+  'Google Docs',
+  'YouTube',
+  'Facebook',
+  'Instagram',
+  'TikTok',
+  'Discord',
+  'Messenger',
+  'Chrome',
+  'Spotify',
+]
 
 const QUESTIONS = [
   {
-    id: 'time_of_day',
-    title: 'Bạn thường dùng điện thoại vào thời điểm nào khi việc học bị ảnh hưởng?',
-    help: 'Model dùng thông tin này để tái tạo đặc trưng thời gian như hour, day_of_week.',
+    id: 'app_name',
+    title: 'Bạn đang dùng ứng dụng nào trong phiên học hiện tại?',
     options: [
-      { label: 'Buổi sáng', value: 'Morning' },
-      { label: 'Buổi chiều', value: 'Afternoon' },
-      { label: 'Buổi tối', value: 'Evening' },
-      { label: 'Đêm muộn', value: 'Night', derives: { is_late_night: 1 } },
+      { label: 'VSCode', value: 'VSCode' },
+      { label: 'Notion', value: 'Notion' },
+      { label: 'Google Docs', value: 'Google Docs' },
+      { label: 'YouTube', value: 'YouTube' },
+      { label: 'Facebook', value: 'Facebook' },
+      { label: 'Instagram', value: 'Instagram' },
+      { label: 'TikTok', value: 'TikTok' },
+      { label: 'Discord', value: 'Discord' },
+      { label: 'Messenger', value: 'Messenger' },
+      { label: 'Chrome', value: 'Chrome' },
+      { label: 'Spotify', value: 'Spotify' },
     ],
   },
   {
-    id: 'app_category',
-    title: 'Nhóm ứng dụng nào làm bạn dễ mất tập trung nhất?',
-    options: [
-      { label: 'Mạng xã hội', value: 'Social' },
-      { label: 'Game', value: 'Gaming' },
-      { label: 'Học tập / năng suất', value: 'Productivity' },
-      { label: 'Video / giải trí', value: 'Entertainment' },
-      { label: 'Hệ thống / tiện ích', value: 'System' },
-    ],
-  },
-  {
-    id: 'duration_minutes',
-    title: 'Một lần cầm điện thoại khi đang học thường kéo dài bao lâu?',
+    id: 'app_usage_minutes',
+    title: 'Thời lượng sử dụng ứng dụng trong phiên này?',
     options: [
       { label: 'Dưới 10 phút', value: 8 },
       { label: '10-30 phút', value: 20 },
@@ -35,18 +46,18 @@ const QUESTIONS = [
     ],
   },
   {
-    id: 'unlock_count',
-    title: 'Trong một buổi học, bạn mở khóa điện thoại khoảng bao nhiêu lần?',
+    id: 'app_open_count',
+    title: 'Số lần mở điện thoại hoặc mở app trong phiên học?',
     options: [
-      { label: '1-3 lần', value: 2 },
-      { label: '4-6 lần', value: 5 },
-      { label: '7-10 lần', value: 8 },
+      { label: '0-2 lần', value: 2 },
+      { label: '3-5 lần', value: 4 },
+      { label: '6-9 lần', value: 8 },
       { label: 'Trên 10 lần', value: 12 },
     ],
   },
   {
     id: 'notification_count',
-    title: 'Bạn thường nhận bao nhiêu thông báo trong lúc học?',
+    title: 'Số thông báo nhận được trong lúc học?',
     options: [
       { label: '0-3 thông báo', value: 2 },
       { label: '4-10 thông báo', value: 7 },
@@ -56,17 +67,17 @@ const QUESTIONS = [
   },
   {
     id: 'hours_to_deadline',
-    title: 'Deadline gần nhất của bạn còn khoảng bao lâu?',
+    title: 'Deadline gần nhất còn bao nhiêu giờ?',
     options: [
       { label: 'Trên 3 ngày', value: 96 },
       { label: '2-3 ngày', value: 60 },
-      { label: 'Trong 24-48 giờ', value: 36 },
+      { label: '24-48 giờ', value: 36 },
       { label: 'Dưới 24 giờ', value: 12 },
     ],
   },
   {
-    id: 'task_priority',
-    title: 'Nhiệm vụ hiện tại quan trọng ở mức nào?',
+    id: 'task_importance',
+    title: 'Mức độ quan trọng của nhiệm vụ hiện tại?',
     options: [
       { label: 'Thấp', value: 'Low' },
       { label: 'Trung bình', value: 'Medium' },
@@ -74,29 +85,22 @@ const QUESTIONS = [
     ],
   },
   {
-    id: 'assignment_count',
-    title: 'Hiện bạn còn bao nhiêu bài tập / đầu việc học tập?',
+    id: 'pending_tasks_count',
+    title: 'Số đầu việc bạn còn cần hoàn thành?',
     options: [
-      { label: '0-1 việc', value: 1 },
-      { label: '2-3 việc', value: 3 },
-      { label: '4-5 việc', value: 5 },
-      { label: 'Trên 5 việc', value: 7 },
+      { label: '0-1 đầu việc', value: 1 },
+      { label: '2-3 đầu việc', value: 3 },
+      { label: '4-5 đầu việc', value: 5 },
+      { label: 'Trên 5 đầu việc', value: 7 },
     ],
   },
   {
-    id: 'is_class_time',
-    title: 'Việc dùng điện thoại này có xảy ra trong giờ học không?',
+    id: 'task_relevance',
+    title: 'Hoạt động/app hiện tại có phục vụ nhiệm vụ chính không?',
     options: [
-      { label: 'Không', value: 0 },
-      { label: 'Có', value: 1 },
-    ],
-  },
-  {
-    id: 'is_study_period',
-    title: 'Đây có phải khung thời gian bạn dự định dùng để học không?',
-    options: [
-      { label: 'Không', value: 0 },
-      { label: 'Có', value: 1 },
+      { label: 'Related (phù hợp)', value: 'Related' },
+      { label: 'Neutral (trung tính)', value: 'Neutral' },
+      { label: 'Unrelated (không phù hợp)', value: 'Unrelated' },
     ],
   },
 ]
@@ -125,13 +129,31 @@ function App() {
   const [result, setResult] = useState(null)
   const [error, setError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [userConfig, setUserConfig] = useState(() => ({
+    t_low: 0.35,
+    t_high: 0.7,
+    main_task_description: 'Làm bài tập lập trình',
+    related_groups: ['Productivity'],
+    related_apps_input: 'VSCode, Notion, Google Docs',
+    app_group_mapping: {
+      VSCode: 'Productivity',
+      Notion: 'Productivity',
+      'Google Docs': 'Productivity',
+      YouTube: 'Entertainment',
+      Facebook: 'Social',
+      Instagram: 'Social',
+      TikTok: 'Entertainment',
+      Discord: 'Social',
+      Messenger: 'Social',
+      Chrome: 'System',
+      Spotify: 'Entertainment',
+    },
+  }))
 
   const currentQuestion = QUESTIONS[currentIndex]
   const selectedValue = answers[currentQuestion.id]?.value
   const isLastQuestion = currentIndex === QUESTIONS.length - 1
   const progress = Math.round(((currentIndex + 1) / QUESTIONS.length) * 100)
-
-  const payload = useMemo(() => buildPredictionPayload(answers), [answers])
 
   function handleSelect(option) {
     setAnswers((previousAnswers) => ({
@@ -156,6 +178,8 @@ function App() {
     setIsSubmitting(true)
     setError('')
 
+    const payload = buildPredictionPayload(answers, userConfig)
+
     try {
       const response = await fetch('/api/predict', {
         method: 'POST',
@@ -176,6 +200,35 @@ function App() {
     } finally {
       setIsSubmitting(false)
     }
+  }
+
+  function handleConfigChange(fieldName, value) {
+    setUserConfig((previous) => ({
+      ...previous,
+      [fieldName]: value,
+    }))
+  }
+
+  function handleGroupMappingChange(appName, groupName) {
+    setUserConfig((previous) => ({
+      ...previous,
+      app_group_mapping: {
+        ...previous.app_group_mapping,
+        [appName]: groupName,
+      },
+    }))
+  }
+
+  function toggleRelatedGroup(groupName) {
+    setUserConfig((previous) => {
+      const exists = previous.related_groups.includes(groupName)
+      return {
+        ...previous,
+        related_groups: exists
+          ? previous.related_groups.filter((group) => group !== groupName)
+          : [...previous.related_groups, groupName],
+      }
+    })
   }
 
   function handleBack() {
@@ -208,14 +261,100 @@ function App() {
         <p className="eyebrow">UIT CS117 - Student Phone Impact</p>
         <h1>Dự đoán mức độ trì hoãn từ thói quen dùng điện thoại</h1>
         <p className="intro-copy">
-          Câu trả lời của bạn được chuyển thành các feature giống pipeline train model:
-          thời điểm, nhóm app, thời lượng, deadline, thông báo và số lần mở khóa.
+          Luồng mới nhận đầy đủ Input theo đề bài: hành vi dùng điện thoại, bối cảnh học tập,
+          cấu hình ngưỡng và mapping app-group do người dùng tự định nghĩa.
         </p>
 
         <div className="model-card">
-          <span>Best model</span>
-          <strong>XGBoost</strong>
-          <small>Label: Low / Medium / High</small>
+          <span>Output API</span>
+          <strong>Risk score + xác suất</strong>
+          <small>Label: Low / Medium / High theo ngưỡng tùy biến</small>
+        </div>
+
+        <div className="config-card">
+          <h2>Cấu hình phiên học</h2>
+          <label>
+            Nhiệm vụ chính
+            <textarea
+              value={userConfig.main_task_description}
+              onChange={(event) => handleConfigChange('main_task_description', event.target.value)}
+              rows={2}
+            />
+          </label>
+
+          <div className="threshold-row">
+            <label>
+              T_low
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                max="1"
+                value={userConfig.t_low}
+                onChange={(event) => handleConfigChange('t_low', event.target.value)}
+              />
+            </label>
+            <label>
+              T_high
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                max="1"
+                value={userConfig.t_high}
+                onChange={(event) => handleConfigChange('t_high', event.target.value)}
+              />
+            </label>
+          </div>
+
+          <label>
+            Related apps (phân tách bằng dấu phẩy)
+            <input
+              type="text"
+              value={userConfig.related_apps_input}
+              onChange={(event) => handleConfigChange('related_apps_input', event.target.value)}
+            />
+          </label>
+
+          <div>
+            <p className="config-title">Related groups</p>
+            <div className="chip-grid">
+              {APP_GROUPS.map((groupName) => {
+                const active = userConfig.related_groups.includes(groupName)
+                return (
+                  <button
+                    key={groupName}
+                    type="button"
+                    className={`chip-button ${active ? 'active' : ''}`}
+                    onClick={() => toggleRelatedGroup(groupName)}
+                  >
+                    {groupName}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          <div>
+            <p className="config-title">Bảng mapping app-group</p>
+            <div className="mapping-grid">
+              {KNOWN_APPS.map((appName) => (
+                <label key={appName}>
+                  <span>{appName}</span>
+                  <select
+                    value={userConfig.app_group_mapping[appName]}
+                    onChange={(event) => handleGroupMappingChange(appName, event.target.value)}
+                  >
+                    {APP_GROUPS.map((groupName) => (
+                      <option key={groupName} value={groupName}>
+                        {groupName}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ))}
+            </div>
+          </div>
         </div>
       </section>
 
@@ -279,31 +418,25 @@ function App() {
   )
 }
 
-function buildPredictionPayload(answers) {
-  const payload = {
-    time_of_day: 'Evening',
-    app_category: 'Social',
-    duration_minutes: 20,
-    is_class_time: 0,
-    is_study_period: 1,
-    is_late_night: 0,
-    hours_to_deadline: 48,
-    task_priority: 'Medium',
-    assignment_count: 2,
-    notification_count: 5,
-    unlock_count: 4,
-  }
+function buildPredictionPayload(answers, userConfig) {
+  const payload = {}
 
   Object.entries(answers).forEach(([fieldName, option]) => {
     payload[fieldName] = option.value
-
-    if (option.derives) {
-      Object.assign(payload, option.derives)
-    }
   })
 
-  if (payload.time_of_day === 'Night') {
-    payload.is_late_night = 1
+  const relatedApps = userConfig.related_apps_input
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean)
+
+  payload.user_config = {
+    t_low: Number(userConfig.t_low),
+    t_high: Number(userConfig.t_high),
+    main_task_description: userConfig.main_task_description,
+    related_groups: userConfig.related_groups,
+    related_apps: relatedApps,
+    app_group_mapping: userConfig.app_group_mapping,
   }
 
   return payload
@@ -311,30 +444,34 @@ function buildPredictionPayload(answers) {
 
 function ResultPanel({ answers, result, onRestart }) {
   const meta = RESULT_META[result.label] || RESULT_META.Medium
-  const probabilities = result.probabilities || {}
-  const maxProbability = Math.max(0, ...Object.values(probabilities))
+  const scorePercent = Math.round(result.risk_probability * 100)
 
   return (
     <section className="result-layout">
       <div className={`result-card ${meta.tone}`}>
         <p className="eyebrow">Kết quả dự đoán</p>
         <h1>{meta.title}</h1>
-        <div className="level-badge">Mức trì hoãn: {meta.label}</div>
-        <p className="intro-copy">{result.advice}</p>
+        <div className="level-badge">Mức trì hoãn: {meta.label} ({result.label})</div>
+        <p className="intro-copy">
+          Risk score: <strong>{result.risk_score}</strong>/100 | Xác suất nguy cơ: <strong>{scorePercent}%</strong>
+        </p>
 
         <div className="probability-list">
-          {Object.entries(probabilities).map(([label, value]) => (
-            <div
-              key={label}
-              className={`probability-row ${value === maxProbability ? 'top-probability' : ''}`}
-            >
-              <span>{RESULT_META[label]?.label || label}</span>
-              <strong>{Math.round(value * 100)}%</strong>
-              <div className="probability-track">
-                <div style={{ width: `${Math.round(value * 100)}%` }} />
-              </div>
+          <div className="probability-row top-probability">
+            <span>Xác suất nguy cơ trì hoãn</span>
+            <strong>{scorePercent}%</strong>
+            <div className="probability-track">
+              <div style={{ width: `${scorePercent}%` }} />
             </div>
-          ))}
+          </div>
+          <div className="probability-row">
+            <span>Ngưỡng Low</span>
+            <strong>{Math.round(result.thresholds_applied.t_low * 100)}%</strong>
+          </div>
+          <div className="probability-row">
+            <span>Ngưỡng High</span>
+            <strong>{Math.round(result.thresholds_applied.t_high * 100)}%</strong>
+          </div>
         </div>
 
         <button type="button" className="primary-button" onClick={onRestart}>
@@ -346,9 +483,9 @@ function ResultPanel({ answers, result, onRestart }) {
         <section className="white-card">
           <h2>Các tín hiệu model đang chú ý</h2>
           <div className="explanation-list">
-            {result.explanations?.map((item) => (
-              <div key={item.title} className={`explanation-item ${item.tone}`}>
-                <strong>{item.title}</strong>
+            {result.key_factors?.map((item) => (
+              <div key={item.factor} className={`explanation-item ${item.tone === 'risk' ? 'risk' : 'positive'}`}>
+                <strong>{item.factor} ({item.impact > 0 ? '+' : ''}{item.impact})</strong>
                 <p>{item.detail}</p>
               </div>
             ))}
@@ -356,7 +493,17 @@ function ResultPanel({ answers, result, onRestart }) {
         </section>
 
         <section className="white-card">
-          <h2>Câu trả lời đã chọn</h2>
+          <h2>Gợi ý hỗ trợ phù hợp</h2>
+          <div className="answer-list">
+            {result.recommendations?.map((item) => (
+              <div key={item}>
+                <span>Action</span>
+                <strong>{item}</strong>
+              </div>
+            ))}
+          </div>
+
+          <h2 className="sub-title">Thông tin đã chọn</h2>
           <div className="answer-list">
             {QUESTIONS.map((question) => (
               <div key={question.id}>

@@ -159,6 +159,106 @@
   font-size: 26px;
 }
 
+.config-card {
+  margin-top: 16px;
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+  border-radius: 18px;
+  background: linear-gradient(180deg, #ffffff, #f8fafc);
+  border: 1px solid var(--border);
+}
+
+.config-card h2 {
+  margin: 0;
+  font-size: 20px;
+  color: var(--dark-text);
+}
+
+.config-card label {
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 800;
+  color: #475569;
+}
+
+.config-card input,
+.config-card textarea,
+.config-card select {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  color: #0f172a;
+  background: #ffffff;
+  font: inherit;
+}
+
+.config-card textarea {
+  resize: vertical;
+  min-height: 64px;
+}
+
+.threshold-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.config-title {
+  margin: 0 0 8px;
+  color: #475569;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.chip-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip-button {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: #ffffff;
+  color: #334155;
+  padding: 7px 12px;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.chip-button.active {
+  background: #ccfbf1;
+  border-color: #5eead4;
+  color: #0f766e;
+}
+
+.mapping-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 10px;
+}
+
+.mapping-grid label {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.mapping-grid label span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mapping-grid select {
+  width: 150px;
+}
+
 .quiz-panel {
   padding: 28px;
 }
@@ -501,6 +601,10 @@ button:disabled {
   font-size: 22px;
 }
 
+.sub-title {
+  margin-top: 20px !important;
+}
+
 .explanation-item,
 .answer-list div {
   padding: 16px;
@@ -590,5 +694,14 @@ pre {
 
   .option-grid {
     grid-template-columns: 1fr;
+  }
+
+  .threshold-row,
+  .mapping-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .mapping-grid select {
+    width: 100%;
   }
 }

@@ -340,8 +340,3 @@ if __name__ == "__main__":
     print("\nĐã lưu 2 file CSV:")
     print("1. student_phone_procrastination_full.csv")
     print("2. student_phone_procrastination_ml_ready.csv")
-
-    print("\nGợi ý khi train mô hình:")
-    print("- Dùng student_phone_procrastination_ml_ready.csv")
-    print("- Cột target/label: procrastination_level")
-    print("- Không nên dùng risk_score_hidden để train vì đó là điểm nội bộ dùng để sinh nhãn")

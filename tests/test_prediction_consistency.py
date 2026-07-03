@@ -1,43 +1,76 @@
-import joblib
-
-from prediction_service import MODEL_PATH, build_feature_frame, predict
+from prediction_service import predict
 
 
 SAMPLE_PAYLOAD = {
-    "timestamp": "2026-05-07T23:53",
-    "time_of_day": "Night",
-    "app_category": "Social",
-    "duration_minutes": "37",
-    "is_class_time": "0",
-    "is_study_period": "0",
-    "is_late_night": "1",
-    "hours_to_deadline": "167.37",
-    "task_priority": "Low",
-    "assignment_count": "5",
-    "notification_count": "18",
-    "unlock_count": "6",
+    "app_name": "Instagram",
+    "app_usage_minutes": 45,
+    "app_open_count": 8,
+    "notification_count": 15,
+    "hours_to_deadline": 18,
+    "task_importance": "High",
+    "pending_tasks_count": 5,
+    "task_relevance": "Unrelated",
+    "user_config": {
+        "t_low": 0.35,
+        "t_high": 0.70,
+        "main_task_description": "On thi cuoi ky",
+        "related_groups": ["Productivity"],
+        "related_apps": ["VSCode", "Notion"],
+        "app_group_mapping": {
+            "instagram": "Social",
+            "vscode": "Productivity",
+        },
+    },
 }
 
 
-def test_backend_prediction_matches_direct_model_prediction():
-    model = joblib.load(MODEL_PATH)
-    direct_prediction = int(model.predict(build_feature_frame(SAMPLE_PAYLOAD))[0])
-    service_prediction = predict(SAMPLE_PAYLOAD, model=model)
+def test_prediction_returns_expected_contract_fields():
+    response = predict(SAMPLE_PAYLOAD)
 
-    expected_label = {0: "Low", 1: "Medium", 2: "High"}[direct_prediction]
-    assert service_prediction["label"] == expected_label
+    assert "risk_score" in response
+    assert "risk_probability" in response
+    assert "label" in response
+    assert "key_factors" in response
+    assert "recommendations" in response
+    assert response["label"] in {"Low", "Medium", "High"}
+    assert len(response["key_factors"]) > 0
+    assert len(response["recommendations"]) > 0
 
 
-def test_time_features_are_recreated_for_web_input():
-    df = build_feature_frame(SAMPLE_PAYLOAD)
-    assert {"hour", "day_of_week", "is_weekend"}.issubset(df.columns)
+def test_thresholds_change_output_label():
+    strict_threshold_payload = {
+        **SAMPLE_PAYLOAD,
+        "user_config": {
+            **SAMPLE_PAYLOAD["user_config"],
+            "t_low": 0.15,
+            "t_high": 0.30,
+        },
+    }
+    loose_threshold_payload = {
+        **SAMPLE_PAYLOAD,
+        "user_config": {
+            **SAMPLE_PAYLOAD["user_config"],
+            "t_low": 0.80,
+            "t_high": 0.95,
+        },
+    }
+
+    strict_result = predict(strict_threshold_payload)
+    loose_result = predict(loose_threshold_payload)
+
+    assert strict_result["label"] in {"Medium", "High"}
+    assert loose_result["label"] in {"Low", "Medium"}
 
 
-def test_invalid_binary_input_is_rejected():
-    invalid_payload = {**SAMPLE_PAYLOAD, "is_class_time": "2"}
+def test_mapping_is_required_when_app_group_not_provided():
+    invalid_payload = {
+        **SAMPLE_PAYLOAD,
+        "app_name": "Unknown App",
+    }
+
     try:
-        build_feature_frame(invalid_payload)
+        predict(invalid_payload)
     except ValueError as exc:
-        assert "is_class_time" in str(exc)
+        assert "app_group_mapping" in str(exc)
     else:
-        raise AssertionError("Dữ liệu nhị phân không hợp lệ phải bị từ chối.")
+        raise AssertionError("Thiếu mapping app-group phải bị từ chối.")
